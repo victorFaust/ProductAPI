@@ -83,4 +83,38 @@ public sealed class ProductService : IProductService
             product.CreatedAt,
             product.UpdatedAt);
     }
+
+    public async Task<ProductDto> UpdateAsync(Guid id, UpdateProductDto request)
+    {
+        _logger.LogInformation("Updating product {ProductId}", id);
+        var product = await _uow.Products.GetByIdAsync(id);
+
+        product.Update(request.Name, request.Description, request.Price, request.Colour);
+        _uow.Products.Update(product);
+        await _uow.CommitAsync();
+
+        _logger.LogInformation("Product updated: {ProductId}", product.Id);
+        if (_mapper is not null)
+            return _mapper.Map<ProductDto>(product);
+
+        return new ProductDto(
+            product.Id,
+            product.Name,
+            product.Description,
+            product.Price,
+            product.Colour,
+            product.CreatedAt,
+            product.UpdatedAt);
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        _logger.LogInformation("Deleting product {ProductId}", id);
+        var product = await _uow.Products.GetByIdAsync(id);
+
+        _uow.Products.Remove(product);
+        await _uow.CommitAsync();
+        _logger.LogInformation("Product deleted: {ProductId}", id);
+    }
 }
+

@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import CreateProductForm from './CreateProductForm';
+import type { ProductDto } from '../types';
 
 interface Props {
   onClose: () => void;
   onProductCreated: () => void;
+  product?: ProductDto;
 }
 
-export default function ProductModal({ onClose, onProductCreated }: Props) {
+export default function ProductModal({ onClose, onProductCreated, product }: Props) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -27,18 +29,19 @@ export default function ProductModal({ onClose, onProductCreated }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative"
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 relative"
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none cursor-pointer"
           onClick={onClose}
           aria-label="Close"
         >
           ✕
         </button>
-        <CreateProductForm onProductCreated={handleCreated} />
+        <CreateProductForm onProductCreated={handleCreated} product={product} />
       </div>
     </div>
   );
 }
+

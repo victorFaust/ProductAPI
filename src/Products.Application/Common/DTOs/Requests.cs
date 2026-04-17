@@ -18,4 +18,10 @@ namespace Products.Application.Common.DTOs
         string? Description,
         decimal Price,
         string Colour);
+
+    public record UpdateProductRequest(
+        string Name,
+        string? Description,
+        decimal Price,
+        string Colour);
 }

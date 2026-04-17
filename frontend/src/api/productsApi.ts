@@ -12,3 +12,14 @@ export async function createProduct(req: CreateProductRequest): Promise<ProductD
   if (!data.isSuccess || !data.data) throw new Error(data.responseMsg || 'Failed to create product');
   return data.data;
 }
+
+export async function updateProduct(id: string, req: CreateProductRequest): Promise<ProductDto> {
+  const { data } = await client.put<ApiResponse<ProductDto>>(`/api/products/${id}`, req);
+  if (!data.isSuccess || !data.data) throw new Error(data.responseMsg || 'Failed to update product');
+  return data.data;
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  await client.delete(`/api/products/${id}`);
+}
+

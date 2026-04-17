@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { toast } from 'react-toastify';
-import { createProduct } from '../api/productsApi';
-import type { CreateProductRequest } from '../types';
+import { createProduct, updateProduct } from '../api/productsApi';
+import type { CreateProductRequest, ProductDto } from '../types';
 
 interface Props {
   onProductCreated: () => void;
+  product?: ProductDto;
 }
 
 const EMPTY_FORM: CreateProductRequest = {
@@ -14,10 +15,15 @@ const EMPTY_FORM: CreateProductRequest = {
   colour: '',
 };
 
-export default function CreateProductForm({ onProductCreated }: Props) {
-  const [form, setForm] = useState<CreateProductRequest>(EMPTY_FORM);
+export default function CreateProductForm({ onProductCreated, product }: Props) {
+  const isEdit = Boolean(product);
+  const [form, setForm] = useState<CreateProductRequest>(
+    product
+      ? { name: product.name, description: product.description, price: product.price, colour: product.colour }
+      : EMPTY_FORM
+  );
   const [errors, setErrors] = useState<Partial<Record<keyof CreateProductRequest, string>>>({});
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [serverError, setServerError] = useState('');
 
   function validate(): boolean {
@@ -35,16 +41,22 @@ export default function CreateProductForm({ onProductCreated }: Props) {
     setStatus('loading');
     setServerError('');
     try {
-      await createProduct(form);
-      setForm(EMPTY_FORM);
-      setErrors({});
+      if (isEdit && product) {
+        await updateProduct(product.id, form);
+        toast.success('Product updated successfully!');
+      } else {
+        await createProduct(form);
+        setForm(EMPTY_FORM);
+        setErrors({});
+        toast.success('Product created successfully!');
+      }
       setStatus('idle');
       onProductCreated();
-      toast.success('Product created successfully!');
     } catch {
-      setServerError('Failed to create product. Please try again.');
+      const msg = isEdit ? 'Failed to update product.' : 'Failed to create product.';
+      setServerError(msg);
       setStatus('error');
-      toast.error('Failed to create product. Please try again.');
+      toast.error(msg);
     }
   }
 
@@ -53,16 +65,18 @@ export default function CreateProductForm({ onProductCreated }: Props) {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  const inputBase = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500';
-  const inputNormal = `${inputBase} border-slate-300`;
+  const inputBase = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white';
+  const inputNormal = `${inputBase} border-slate-300 dark:border-slate-600`;
   const inputError = `${inputBase} border-red-500`;
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-900 mb-4">New Product</h2>
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+        {isEdit ? 'Edit Product' : 'New Product'}
+      </h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-700" htmlFor="pName">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="pName">
             Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -76,7 +90,7 @@ export default function CreateProductForm({ onProductCreated }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-700" htmlFor="pDescription">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="pDescription">
             Description
           </label>
           <input
@@ -89,7 +103,7 @@ export default function CreateProductForm({ onProductCreated }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-700" htmlFor="pPrice">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="pPrice">
             Price <span className="text-red-500">*</span>
           </label>
           <input
@@ -105,7 +119,7 @@ export default function CreateProductForm({ onProductCreated }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-700" htmlFor="pColour">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="pColour">
             Colour <span className="text-red-500">*</span>
           </label>
           <input
@@ -127,7 +141,7 @@ export default function CreateProductForm({ onProductCreated }: Props) {
           className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-lg py-2 text-sm transition-colors cursor-pointer"
           disabled={status === 'loading'}
         >
-          {status === 'loading' ? 'Creating…' : 'Create Product'}
+          {status === 'loading' ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save Changes' : 'Create Product')}
         </button>
       </form>
     </div>
