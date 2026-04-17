@@ -1,15 +1,44 @@
 # Architecture
 
-## 1. Clean Architecture Layers
+## Overview
 
-Each layer depends only inward. The Domain has zero dependencies on any other layer or external package.
+A full-stack web application built with **.NET 8 Clean Architecture** on the backend and **React + TypeScript** on the frontend. The backend follows a strict layered dependency model. The frontend is a Vite-powered SPA communicating with the API over HTTPS.
+
+---
+
+## 1. Solution Structure
+
+```
+ProductsApi.sln
+├── src/
+│   ├── Products.Domain           # Core entities, interfaces, exceptions
+│   ├── Products.Application      # Services, DTOs, validators, interfaces
+│   ├── Products.Infrastructure   # EF Core, JWT, BCrypt, migrations
+│   └── Products.API              # Controllers, middleware, DI wiring, Program.cs
+├── tests/
+│   ├── Products.UnitTests        # xUnit — domain + service logic
+│   └── Products.IntegrationTests # xUnit — full HTTP stack via WebApplicationFactory
+└── frontend/                     # React + TypeScript (Vite)
+    └── src/
+        ├── api/                  # Axios client, authApi, productsApi
+        ├── components/           # ProductTable, ProductModal, CreateProductForm
+        ├── context/              # AuthContext, ThemeContext
+        ├── pages/                # LoginPage, ProductsPage
+        └── types/                # Shared TypeScript interfaces
+```
+
+---
+
+## 2. Clean Architecture Layers
+
+Each layer depends strictly inward. The Domain has zero dependencies on any framework or external package.
 
 ```mermaid
 flowchart TD
-    API["<b>Products.API</b>\nControllers · Middleware\nProgram.cs · ExceptionMiddleware\nSwagger · Serilog"]
-    APP["<b>Products.Application</b>\nCQRS Handlers · FluentValidation Validators\nDTOs · Pipeline Behaviours\nIJwtTokenService · DependencyInjection"]
-    DOM["<b>Products.Domain</b>\nProduct Entity · BaseEntity\nIUnitOfWork · IProductRepository\nInvalidProductException · ProductNotFoundException\nDuplicateProductException"]
-    INF["<b>Products.Infrastructure</b>\nUnitOfWork · ProductRepository\nInMemoryAppContext · JwtTokenService\nJwtSettings · DependencyInjection"]
+    API["<b>Products.API</b>\nControllers · ExceptionMiddleware\nSerilog · Swagger · Program.cs\nSeedUserOptions · DependencyInjection"]
+    APP["<b>Products.Application</b>\nIProductService · IAuthService\nProductService · AuthService\nFluentValidation Validators\nDTOs · IPasswordHasher · IJwtTokenService\nIUnitOfWork (via Domain)"]
+    DOM["<b>Products.Domain</b>\nProduct · User · RefreshToken\nBaseEntity · IUnitOfWork\nIProductRepository · IUserRepository\nIRefreshTokenRepository\nInvalidProductException · ProductNotFoundException"]
+    INF["<b>Products.Infrastructure</b>\nAppDbContext (EF Core + SQL Server)\nProductRepository · UserRepository\nRefreshTokenRepository · UnitOfWork\nJwtTokenService · BcryptPasswordHasher\nMigrations · DependencyInjection"]
 
     API -->|depends on| APP
     API -->|depends on| INF
@@ -23,115 +52,179 @@ flowchart TD
     style API fill:#3b1f3b,color:#fff,stroke:#c678dd
 ```
 
-**Dependency rule (strictly enforced):**
+**Dependency rule:**
 
 | Layer | May reference |
 |---|---|
-| Domain | Nothing (pure C#) |
+| Domain | Nothing — pure C# |
 | Application | Domain only |
 | Infrastructure | Domain + Application |
 | API | Application + Infrastructure |
 
-The Domain and Application layers are **framework-free**. Swapping InMemoryAppContext for Entity Framework Core, or replacing RabbitMQ with Azure Service Bus, requires changes only in Infrastructure.
-
 ---
 
-## 2. Unit of Work Pattern — CreateProduct Request Flow
+## 3. Backend — Key Design Decisions
+
+### Service Pattern (not CQRS)
+
+Business logic lives in focused services (`ProductService`, `AuthService`) rather than MediatR command/query handlers. This keeps the layer thin and avoids unnecessary ceremony for a single-resource API. Each service method maps 1:1 to an HTTP endpoint and validates inputs using FluentValidation before touching the domain.
+
+### Unit of Work
+
+`IUnitOfWork` wraps `AppDbContext` and enforces a single transaction boundary per request.
+
+- `IProductRepository.Add / Update / Remove` are **synchronous void** — they stage EF change-tracking entries but never save.
+- `IUnitOfWork.CommitAsync()` calls `SaveChangesAsync()` — the only point at which SQL is committed.
+- Registering `UnitOfWork` as **Scoped** ensures each HTTP request gets an isolated instance.
+
+### Authentication — JWT + Refresh Tokens
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Client
-    participant Controller as ProductsController
-    participant MediatR
-    participant Handler as CreateProductCommandHandler
-    participant UoW as IUnitOfWork
-    participant Repo as IProductRepository
-    participant Store as InMemoryAppContext
+    participant API as Products.API
+    participant AuthService
+    participant DB as SQL Server
 
-    Client->>Controller: POST /api/products {name, price, colour}
-    Controller->>MediatR: Send(CreateProductCommand)
-    MediatR->>Handler: Handle(command, ct)
+    Client->>API: POST /api/auth/login {username, password}
+    API->>AuthService: LoginAsync(dto)
+    AuthService->>DB: SELECT user WHERE username = ?
+    AuthService->>AuthService: BCrypt.Verify(password, hash)
+    AuthService->>DB: INSERT RefreshToken (hashed, 7d expiry)
+    AuthService-->>API: { accessToken (JWT 60min), refreshToken, expiresAt }
+    API-->>Client: 200 OK
 
-    Note over Handler: Product.Create(...) — domain validation
-    Handler->>UoW: Products.Add(product)
-    UoW->>Repo: Add(product) — stages change
-    Repo->>Store: ConcurrentDictionary.TryAdd(id, product)
+    Client->>API: POST /api/auth/refresh {refreshToken}
+    API->>AuthService: RefreshAsync(dto)
+    AuthService->>DB: SELECT RefreshToken WHERE token = ? AND NOT revoked
+    AuthService->>DB: Revoke old token, INSERT new rotated token
+    AuthService-->>API: { new accessToken, new refreshToken, expiresAt }
+    API-->>Client: 200 OK
 
-    Handler->>UoW: await CommitAsync(ct)
-    Note over UoW,Store: Single transaction boundary<br/>EF Core: SaveChangesAsync()
-    UoW-->>Handler: count (success)
-
-    Handler-->>MediatR: ProductDto
-    MediatR-->>Controller: ProductDto
-    Controller-->>Client: 201 Created + Location header
+    Client->>API: POST /api/auth/revoke {refreshToken}
+    API->>AuthService: RevokeAsync(dto)
+    AuthService->>DB: Mark RefreshToken as revoked
+    API-->>Client: 200 OK
 ```
 
-### Why Unit of Work?
+- Access tokens are **short-lived JWTs** (60 minutes, RS256-signed).
+- Refresh tokens are **opaque, hashed** before storage. Token rotation is applied on every refresh — the old token is revoked and a new one issued.
+- The frontend schedules a silent refresh **60 seconds before expiry** using `setTimeout` in `AuthContext`.
 
-The Unit of Work enforces a **single atomic transaction boundary** per HTTP request.
+### Error Handling
 
-- `IProductRepository.Add/Update/Remove` are **synchronous void** — they stage changes but never persist.
-- `IUnitOfWork.CommitAsync()` is the **only** method that writes to the store. This mirrors `DbContext.SaveChangesAsync()` exactly.
-- If `CommitAsync` fails (e.g. a constraint violation), `RollbackAsync()` is called — no partial state is ever committed.
-- Because `UnitOfWork` is registered as **Scoped**, every HTTP request gets its own unit of work instance, preventing cross-request contamination.
-- When InMemoryAppContext is swapped for EF Core's `DbContext`, only `CommitAsync` and `RollbackAsync` change — every handler, test, and interface stays identical.
+`ExceptionMiddleware` catches all unhandled exceptions and maps them to a consistent `ApiResponse<T>` envelope:
+
+```json
+{
+  "isSuccess": false,
+  "responseCode": 404,
+  "responseMsg": "Product abc123 not found.",
+  "data": null
+}
+```
+
+Successful responses follow the same shape with `"isSuccess": true` and `"data"` populated.
 
 ---
 
-## 3. Microservices Event-Driven Architecture
+## 4. API Endpoints
 
-```mermaid
-flowchart LR
-    FE["⚛ React Frontend"]
-    GW["API Gateway\nAWS API Gateway / NGINX"]
-    AUTH["Shared Auth Service\nJWT Issuer / JWKS"]
-    PS["Products Service\n<i>this API</i>"]
-    OS["Orders Service\n.NET"]
-    PAY["Payments Service\n.NET"]
-    NS["Notification Service"]
-    MB["Message Broker\nRabbitMQ / Azure Service Bus"]
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/auth/login` | ❌ | Authenticate and receive tokens |
+| `POST` | `/api/auth/refresh` | ❌ | Exchange refresh token for new pair |
+| `POST` | `/api/auth/revoke` | ❌ | Revoke a refresh token |
+| `GET` | `/api/products` | ✅ JWT | List all products (optional `?colour=` filter) |
+| `POST` | `/api/products` | ✅ JWT | Create a product |
+| `PUT` | `/api/products/{id}` | ✅ JWT | Update a product |
+| `DELETE` | `/api/products/{id}` | ✅ JWT | Delete a product |
+| `GET` | `/health` | ❌ | Health check |
 
-    FE -->|"HTTPS / REST"| GW
+---
 
-    GW -->|"route /products/*"| PS
-    GW -->|"route /orders/*"| OS
+## 5. Database
 
-    PS -->|"validate JWT"| AUTH
-    OS -->|"validate JWT"| AUTH
-    PAY -->|"validate JWT"| AUTH
+**SQL Server** via Entity Framework Core 8. Two migrations applied:
 
-    OS -->|"publish OrderCreated"| MB
-    PS -->|"publish ProductCreated\nStockUpdated"| MB
+| Migration | Tables |
+|-----------|--------|
+| `InitialCreate` | `Products` |
+| `AddUsersTable` | `Users`, `RefreshTokens` |
 
-    MB -->|"subscribe OrderCreated"| PAY
-    MB -->|"subscribe OrderCreated\nPaymentProcessed"| NS
-    PAY -->|"publish PaymentProcessed\nPaymentFailed"| MB
+`User.Roles` is stored as a JSON array (`["Admin"]`) using EF Core's built-in JSON column support.
 
-    style FE fill:#20232a,color:#61dafb,stroke:#61dafb
-    style GW fill:#1a1a2e,color:#e94560,stroke:#e94560
-    style AUTH fill:#0f3460,color:#fff,stroke:#4a90d9
-    style PS fill:#1a4731,color:#fff,stroke:#4caf50
-    style OS fill:#1a4731,color:#fff,stroke:#4caf50
-    style PAY fill:#1a4731,color:#fff,stroke:#4caf50
-    style NS fill:#2d2d2d,color:#fff,stroke:#aaa
-    style MB fill:#3d2b00,color:#fff,stroke:#f5a623
+Seed users are loaded from `appsettings.json → SeedUsers[]` on startup (BCrypt-hashed at seed time).
+
+---
+
+## 6. Testing
+
+| Project | Type | Count | Tooling |
+|---------|------|-------|---------|
+| `Products.UnitTests` | Unit | 17 | xUnit, Moq, FluentAssertions |
+| `Products.IntegrationTests` | Integration | 14 | xUnit, WebApplicationFactory, EF Core InMemory |
+
+Integration tests spin up the full ASP.NET Core pipeline in-process and replace SQL Server with an in-memory EF provider.
+
+---
+
+## 7. Frontend Architecture
+
+**React 19 + TypeScript + Vite**, styled with **Tailwind CSS v4**.
+
+```
+AuthContext ──► auto refresh timer (setTimeout, 60s before expiry)
+              ──► revoke on logout
+
+ThemeContext ──► dark / light mode (localStorage + OS preference)
+
+ProductsPage
+  ├── ProductTable ──► Edit (opens ProductModal pre-filled)
+  │                ──► Delete (inline confirm → deleteProduct API)
+  └── ProductModal ──► CreateProductForm (create or edit mode)
+
+react-toastify ──► success / error / info notifications
 ```
 
-### Why CQRS?
+### Token Refresh Flow (Frontend)
 
-**Command Query Responsibility Segregation** separates the write model (Commands) from the read model (Queries).
+1. On login, `AuthContext` stores the access token in memory and `refreshToken` in a `useRef`.
+2. A `setTimeout` is scheduled to fire 60 seconds before `accessTokenExpiresAt`.
+3. On trigger, `POST /api/auth/refresh` is called silently — the new tokens replace the old ones.
+4. If refresh fails (token expired/revoked), the user is logged out automatically.
+5. On logout, `POST /api/auth/revoke` is called to invalidate the refresh token server-side.
 
-- **Write side** (`CreateProductCommand`) goes through FluentValidation, domain creation, and UoW commit — the full pipeline.
-- **Read side** (`GetAllProductsQuery`, `GetProductsByColourQuery`) bypasses all mutation logic and returns DTOs directly, with minimal overhead.
-- As the system grows, read and write models can be scaled independently. The read side can be served from a read replica, a cache, or a dedicated read-optimised store (e.g. Elasticsearch) without touching write handlers.
-- MediatR's `IPipelineBehavior<,>` allows cross-cutting concerns (logging, validation) to be applied selectively — for example, `ValidationBehaviour` only fires when a registered `IValidator<TRequest>` exists, which is only the case for Commands.
+### Dark / Light Mode
 
-### Why Event-Driven?
+`ThemeContext` adds/removes the `dark` class on `<html>`. Tailwind's `@custom-variant dark` directive applies `dark:` utility classes throughout all components. The selected theme is persisted to `localStorage` and defaults to the OS preference (`prefers-color-scheme`).
 
-Events decouple services so they can evolve, fail, and scale independently.
+---
 
-- **Decoupling** — the Products Service publishes `ProductCreated` and moves on. It has no knowledge of Payments, Notifications, or any downstream consumer. Adding a new consumer never changes the producer.
-- **Resilience** — the Message Broker (RabbitMQ / Azure Service Bus) acts as a durable buffer. If the Payments Service is temporarily down, `OrderCreated` events queue up and are processed when it recovers — no data loss, no cascade failures.
-- **Async processing** — slow operations (sending emails, processing payments, updating analytics) happen out-of-band. The Orders Service returns a `202 Accepted` immediately; the client is notified via the Notification Service once processing completes.
-- **Audit trail** — every event is a first-class fact that can be stored, replayed, and used for debugging or event sourcing in future.
+## 8. Request Flow — Create Product (End-to-End)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Browser as React Frontend
+    participant Vite as Vite Dev Proxy
+    participant API as Products.API
+    participant Service as ProductService
+    participant UoW as UnitOfWork
+    participant DB as SQL Server
+
+    Browser->>Vite: POST /api/products (Bearer JWT)
+    Vite->>API: proxied to https://localhost:7295
+    API->>API: JWT middleware validates token
+    API->>Service: CreateAsync(CreateProductDto)
+    Service->>Service: FluentValidation.ValidateAndThrowAsync()
+    Service->>Service: Product.Create(...) — domain validation
+    Service->>UoW: Products.Add(product)
+    Service->>UoW: CommitAsync()
+    UoW->>DB: INSERT INTO Products
+    UoW-->>Service: saved
+    Service-->>API: ProductDto
+    API-->>Browser: 201 Created { isSuccess: true, data: ProductDto }
+    Browser->>Browser: toast.success(), close modal, refresh table
+```
