@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 import { getProducts } from '../api/productsApi';
 import type { ProductDto } from '../types';
 import ProductTable from '../components/ProductTable';
 import ProductModal from '../components/ProductModal';
 
 export default function ProductsPage() {
-  const { logout } = useAuth();
+  const { logout, username } = useAuth();
   const navigate = useNavigate();
 
   const [products, setProducts] = useState<ProductDto[]>([]);
@@ -40,22 +41,31 @@ export default function ProductsPage() {
 
   function handleLogout() {
     logout();
+    toast.info('You have been logged out.');
     navigate('/login');
   }
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Products</h1>
-        <button
-          className="text-sm text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
+        <h1 className="text-xl font-bold text-slate-900">APP</h1>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold select-none">
+              {username ? username.charAt(0).toUpperCase() : '?'}
+            </div>
+            <span className="text-sm font-medium text-slate-700">{username}</span>
+          </div>
+          <button
+            className="text-sm font-medium text-white bg-slate-700 hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
-      <div className="px-6 py-4 flex items-center gap-3">
+      <div className="px-6 py-4 flex items-center justify-between">
         <input
           type="text"
           className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-56"

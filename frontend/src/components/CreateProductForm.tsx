@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { toast } from 'react-toastify';
 import { createProduct } from '../api/productsApi';
 import type { CreateProductRequest } from '../types';
 
@@ -37,12 +38,13 @@ export default function CreateProductForm({ onProductCreated }: Props) {
       await createProduct(form);
       setForm(EMPTY_FORM);
       setErrors({});
-      setStatus('success');
+      setStatus('idle');
       onProductCreated();
-      setTimeout(() => setStatus('idle'), 3000);
+      toast.success('Product created successfully!');
     } catch {
       setServerError('Failed to create product. Please try again.');
       setStatus('error');
+      toast.error('Failed to create product. Please try again.');
     }
   }
 
@@ -116,9 +118,6 @@ export default function CreateProductForm({ onProductCreated }: Props) {
           {errors.colour && <span className="text-xs text-red-600">{errors.colour}</span>}
         </div>
 
-        {status === 'success' && (
-          <p className="text-sm text-green-600 font-medium">Product created successfully!</p>
-        )}
         {status === 'error' && (
           <p className="text-sm text-red-600">{serverError}</p>
         )}
