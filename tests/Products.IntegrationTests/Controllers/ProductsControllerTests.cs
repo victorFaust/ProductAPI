@@ -7,10 +7,7 @@ using Products.IntegrationTests.Common;
 
 namespace Products.IntegrationTests.Controllers;
 
-/// <summary>
-/// Each test gets a fresh factory/context because xUnit creates a new class instance
-/// per test and the factory is owned by the instance (not shared via IClassFixture).
-/// </summary>
+
 public class ProductsControllerTests : IntegrationTestBase, IDisposable
 {
     private readonly CustomWebApplicationFactory _factory;
@@ -25,7 +22,7 @@ public class ProductsControllerTests : IntegrationTestBase, IDisposable
 
     public void Dispose() => _factory.Dispose();
 
-    // -- Authorization --------------------------------------------------------
+    // -- Authorization
 
     [Fact]
     public async Task GetProducts_WithoutToken_Returns401()

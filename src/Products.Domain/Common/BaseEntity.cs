@@ -1,20 +1,23 @@
-namespace Products.Domain.Common;
-
-public abstract class BaseEntity
+namespace Products.Domain.Common
 {
-    public Guid Id { get; set; }
 
-    private readonly List<INotification> _domainEvents = new();
 
-    public IReadOnlyList<INotification> DomainEvents => _domainEvents.AsReadOnly();
-
-    public void AddDomainEvent(INotification domainEvent)
+    public abstract class BaseEntity
     {
-        _domainEvents.Add(domainEvent);
-    }
+        public Guid Id { get; set; }
 
-    public void ClearDomainEvents()
-    {
-        _domainEvents.Clear();
+        private readonly List<INotification> _domainEvents = new();
+
+        public IReadOnlyList<INotification> DomainEvents => _domainEvents.AsReadOnly();
+
+        public void AddDomainEvent(INotification domainEvent)
+        {
+            _domainEvents.Add(domainEvent);
+        }
+
+        public void ClearDomainEvents()
+        {
+            _domainEvents.Clear();
+        }
     }
 }

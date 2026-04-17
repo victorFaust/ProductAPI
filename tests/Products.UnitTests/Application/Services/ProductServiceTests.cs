@@ -30,7 +30,7 @@ public class ProductServiceTests
             NullLogger<ProductService>.Instance);
     }
 
-    // Get All
+  
 
     [Fact]
     public async Task GetAllAsync_WhenProductsExist_ReturnsAllMapped()
@@ -58,7 +58,7 @@ public class ProductServiceTests
         result.Should().BeEmpty();
     }
 
-    // Get By Colour
+   
 
     [Fact]
     public async Task GetByColourAsync_ReturnsOnlyMatchingProducts()
@@ -83,7 +83,7 @@ public class ProductServiceTests
         result.Should().BeEmpty();
     }
 
-    // Create 
+   
 
     [Fact]
     public async Task CreateAsync_ValidRequest_CallsRepositoryAddAndCommit()

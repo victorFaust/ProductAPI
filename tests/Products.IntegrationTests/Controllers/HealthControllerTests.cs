@@ -6,11 +6,9 @@ using Products.IntegrationTests.Common;
 
 namespace Products.IntegrationTests.Controllers;
 
-public class HealthControllerTests
-    : IntegrationTestBase, IClassFixture<CustomWebApplicationFactory>
+public class HealthControllerTests  : IntegrationTestBase, IClassFixture<CustomWebApplicationFactory>
 {
-    public HealthControllerTests(CustomWebApplicationFactory factory)
-        : base(factory) { }
+    public HealthControllerTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task GetHealth_ReturnsOk_WithoutAuthentication()

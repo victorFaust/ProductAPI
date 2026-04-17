@@ -5,7 +5,7 @@ using Products.Infrastructure.Persistence.Context;
 
 namespace Products.Infrastructure.Persistence.Repositories;
 
-public sealed class RefreshTokenRepository : IRefreshTokenRepository
+public class RefreshTokenRepository : IRefreshTokenRepository
 {
     private readonly AppDbContext _context;
 
@@ -15,11 +15,17 @@ public sealed class RefreshTokenRepository : IRefreshTokenRepository
     }
 
     public async Task<RefreshToken?> GetByTokenAsync(string token)
-        => await _context.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token);
+    {
+        return await _context.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token);
+    }
 
     public void Add(RefreshToken refreshToken)
-        => _context.RefreshTokens.Add(refreshToken);
+    {
+        _context.RefreshTokens.Add(refreshToken);
+    }
 
     public void Revoke(RefreshToken refreshToken)
-        => _context.RefreshTokens.Update(refreshToken);
+    {
+        _context.RefreshTokens.Update(refreshToken);
+    }
 }

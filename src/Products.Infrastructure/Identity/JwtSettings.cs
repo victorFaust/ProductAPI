@@ -1,6 +1,6 @@
 namespace Products.Infrastructure.Identity;
 
-public sealed class JwtSettings
+public class JwtSettings
 {
     public const string SectionName = "JwtSettings";
     public string Issuer { get; init; } = default!;

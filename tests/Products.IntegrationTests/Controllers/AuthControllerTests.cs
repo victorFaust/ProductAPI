@@ -7,11 +7,9 @@ using Products.IntegrationTests.Common;
 
 namespace Products.IntegrationTests.Controllers;
 
-public class AuthControllerTests
-    : IntegrationTestBase, IClassFixture<CustomWebApplicationFactory>
+public class AuthControllerTests : IntegrationTestBase, IClassFixture<CustomWebApplicationFactory>
 {
-    public AuthControllerTests(CustomWebApplicationFactory factory)
-        : base(factory) { }
+    public AuthControllerTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task Login_WithValidCredentials_Returns200WithToken()
@@ -38,7 +36,7 @@ public class AuthControllerTests
     [Fact]
     public async Task Login_WithMissingUsername_Returns400()
     {
-        // Send only the password field — Username is [Required] so model binding returns 400
+       
         var response = await Client.PostAsJsonAsync("/api/auth/login",
             new { password = AdminPassword });
 

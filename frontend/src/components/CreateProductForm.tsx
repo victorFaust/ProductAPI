@@ -1,7 +1,6 @@
-import React, { useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { createProduct } from '../api/productsApi';
 import type { CreateProductRequest } from '../types';
-import styles from './CreateProductForm.module.css';
 
 interface Props {
   onProductCreated: () => void;
@@ -52,77 +51,81 @@ export default function CreateProductForm({ onProductCreated }: Props) {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
+  const inputBase = 'w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500';
+  const inputNormal = `${inputBase} border-slate-300`;
+  const inputError = `${inputBase} border-red-500`;
+
   return (
-    <div className={styles.card}>
-      <h2 className={styles.heading}>New Product</h2>
-      <form onSubmit={handleSubmit} className={styles.form} noValidate>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="pName">
-            Name <span className={styles.required}>*</span>
+    <div>
+      <h2 className="text-lg font-semibold text-slate-900 mb-4">New Product</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-slate-700" htmlFor="pName">
+            Name <span className="text-red-500">*</span>
           </label>
           <input
             id="pName"
             type="text"
-            className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
+            className={errors.name ? inputError : inputNormal}
             value={form.name}
             onChange={(e) => handleChange('name', e.target.value)}
           />
-          {errors.name && <span className={styles.fieldError}>{errors.name}</span>}
+          {errors.name && <span className="text-xs text-red-600">{errors.name}</span>}
         </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="pDescription">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-slate-700" htmlFor="pDescription">
             Description
           </label>
           <input
             id="pDescription"
             type="text"
-            className={styles.input}
+            className={inputNormal}
             value={form.description}
             onChange={(e) => handleChange('description', e.target.value)}
           />
         </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="pPrice">
-            Price <span className={styles.required}>*</span>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-slate-700" htmlFor="pPrice">
+            Price <span className="text-red-500">*</span>
           </label>
           <input
             id="pPrice"
             type="number"
             min="0.01"
             step="0.01"
-            className={`${styles.input} ${errors.price ? styles.inputError : ''}`}
+            className={errors.price ? inputError : inputNormal}
             value={form.price === 0 ? '' : form.price}
             onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)}
           />
-          {errors.price && <span className={styles.fieldError}>{errors.price}</span>}
+          {errors.price && <span className="text-xs text-red-600">{errors.price}</span>}
         </div>
 
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="pColour">
-            Colour <span className={styles.required}>*</span>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-slate-700" htmlFor="pColour">
+            Colour <span className="text-red-500">*</span>
           </label>
           <input
             id="pColour"
             type="text"
-            className={`${styles.input} ${errors.colour ? styles.inputError : ''}`}
+            className={errors.colour ? inputError : inputNormal}
             value={form.colour}
             onChange={(e) => handleChange('colour', e.target.value)}
           />
-          {errors.colour && <span className={styles.fieldError}>{errors.colour}</span>}
+          {errors.colour && <span className="text-xs text-red-600">{errors.colour}</span>}
         </div>
 
         {status === 'success' && (
-          <p className={styles.success}>Product created successfully!</p>
+          <p className="text-sm text-green-600 font-medium">Product created successfully!</p>
         )}
         {status === 'error' && (
-          <p className={styles.errorMsg}>{serverError}</p>
+          <p className="text-sm text-red-600">{serverError}</p>
         )}
 
         <button
           type="submit"
-          className={styles.button}
+          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-lg py-2 text-sm transition-colors cursor-pointer"
           disabled={status === 'loading'}
         >
           {status === 'loading' ? 'Creating…' : 'Create Product'}

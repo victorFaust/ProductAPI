@@ -5,7 +5,7 @@ using Products.Infrastructure.Persistence.Context;
 
 namespace Products.Infrastructure.Persistence.Repositories;
 
-public sealed class UserRepository : IUserRepository
+public class UserRepository : IUserRepository
 {
     private readonly AppDbContext _context;
 
@@ -14,10 +14,15 @@ public sealed class UserRepository : IUserRepository
         _context = context;
     }
 
-    public Task<User?> GetByUsernameAsync(string username) =>
-        _context.Users
+    public Task<User?> GetByUsernameAsync(string username)
+    {
+        return _context.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Username == username);
+    }
 
-    public void Add(User user) => _context.Users.Add(user);
+    public void Add(User user)
+    {
+        _context.Users.Add(user);
+    }
 }

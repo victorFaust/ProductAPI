@@ -1,12 +1,15 @@
-namespace Products.Application.Common;
-
-public interface IJwtTokenService
+namespace Products.Application.Common
 {
-    /// <summary>Generates a short-lived JWT access token.</summary>
-    (string Token, DateTime ExpiresAt) GenerateAccessToken(string username, IEnumerable<string> roles);
 
-    /// <summary>Generates a cryptographically random refresh token string.</summary>
-    string GenerateRefreshToken();
+    public interface IJwtTokenService
+    {
 
-    bool ValidateToken(string token);
+        (string Token, DateTime ExpiresAt) GenerateAccessToken(string username, IEnumerable<string> roles);
+
+
+        string GenerateRefreshToken();
+
+        bool ValidateToken(string token);
+    }
+
 }

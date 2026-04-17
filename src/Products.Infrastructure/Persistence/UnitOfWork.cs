@@ -19,17 +19,34 @@ public class UnitOfWork : IUnitOfWork, IDisposable
         _context = context;
     }
 
-    public IProductRepository Products =>
-        _products ??= new ProductRepository(_context);
+    public IProductRepository Products
+    {
+        get
+        {
+            return _products ??= new ProductRepository(_context);
+        }
+    }
 
-    public IRefreshTokenRepository RefreshTokens =>
-        _refreshTokens ??= new RefreshTokenRepository(_context);
+    public IRefreshTokenRepository RefreshTokens
+    {
+        get
+        {
+            return _refreshTokens ??= new RefreshTokenRepository(_context);
+        }
+    }
 
-    public IUserRepository Users =>
-        _users ??= new UserRepository(_context);
+    public IUserRepository Users
+    {
+        get
+        {
+            return _users ??= new UserRepository(_context);
+        }
+    }
 
     public Task<int> CommitAsync()
-        => _context.SaveChangesAsync();
+    {
+        return _context.SaveChangesAsync();
+    }
 
     public Task RollbackAsync()
     {

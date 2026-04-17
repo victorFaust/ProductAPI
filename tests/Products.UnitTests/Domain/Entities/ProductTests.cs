@@ -6,8 +6,7 @@ namespace Products.UnitTests.Domain.Entities;
 
 public class ProductTests
 {
-    // ── Factory: happy path ──────────────────────────────────────────────────
-
+  
     [Fact]
     public void Create_WithValidInputs_SetsAllPropertiesCorrectly()
     {
@@ -38,8 +37,7 @@ public class ProductTests
         product.CreatedAt.Should().BeAfter(before).And.BeOnOrBefore(DateTime.UtcNow);
     }
 
-    // ── Factory: validation guards ───────────────────────────────────────────
-
+   
     [Fact]
     public void Create_WithEmptyName_ThrowsInvalidProductException()
     {
@@ -63,8 +61,6 @@ public class ProductTests
 
         act.Should().Throw<InvalidProductException>();
     }
-
-    // ── Update ───────────────────────────────────────────────────────────────
 
     [Fact]
     public void Update_ChangesNameAndPrice_SetsUpdatedAt()

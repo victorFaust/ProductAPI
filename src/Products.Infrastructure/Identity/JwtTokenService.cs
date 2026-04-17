@@ -8,7 +8,7 @@ using Products.Application.Common;
 
 namespace Products.Infrastructure.Identity;
 
-public sealed class JwtTokenService : IJwtTokenService
+public class JwtTokenService : IJwtTokenService
 {
     private readonly JwtSettings _settings;
 

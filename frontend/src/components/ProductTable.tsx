@@ -1,6 +1,4 @@
-import React from 'react';
 import type { ProductDto } from '../types';
-import styles from './ProductTable.module.css';
 
 interface Props {
   products: ProductDto[];
@@ -11,9 +9,9 @@ const SKELETON_ROWS = 4;
 
 function ColourBadge({ colour }: { colour: string }) {
   return (
-    <span className={styles.badgeWrapper}>
+    <span className="inline-flex items-center gap-1.5 text-sm">
       <span
-        className={styles.dot}
+        className="w-3 h-3 rounded-full inline-block flex-shrink-0"
         style={{ backgroundColor: colour.toLowerCase() }}
         aria-hidden="true"
       />
@@ -39,24 +37,24 @@ function formatDate(iso: string) {
 
 export default function ProductTable({ products, loading }: Props) {
   return (
-    <div className={styles.card}>
-      <table className={styles.table}>
-        <thead>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <table className="w-full text-sm text-left">
+        <thead className="bg-slate-50 border-b border-slate-200">
           <tr>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Price</th>
-            <th>Colour</th>
-            <th>Created</th>
+            <th className="px-4 py-3 font-semibold text-slate-600">Name</th>
+            <th className="px-4 py-3 font-semibold text-slate-600">Description</th>
+            <th className="px-4 py-3 font-semibold text-slate-600">Price</th>
+            <th className="px-4 py-3 font-semibold text-slate-600">Colour</th>
+            <th className="px-4 py-3 font-semibold text-slate-600">Created</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-slate-100">
           {loading
             ? Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-                <tr key={i} className={styles.skeletonRow}>
+                <tr key={i}>
                   {Array.from({ length: 5 }).map((_, j) => (
-                    <td key={j}>
-                      <span className={styles.skeleton} />
+                    <td key={j} className="px-4 py-3">
+                      <span className="block h-4 bg-slate-200 rounded animate-pulse w-24" />
                     </td>
                   ))}
                 </tr>
@@ -64,20 +62,20 @@ export default function ProductTable({ products, loading }: Props) {
             : products.length === 0
             ? (
                 <tr>
-                  <td colSpan={5} className={styles.empty}>
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
                     No products found. Create one to get started.
                   </td>
                 </tr>
               )
             : products.map((p) => (
-                <tr key={p.id}>
-                  <td className={styles.nameCell}>{p.name}</td>
-                  <td className={styles.descCell}>{p.description || '—'}</td>
-                  <td className={styles.priceCell}>{formatCurrency(p.price)}</td>
-                  <td>
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
+                  <td className="px-4 py-3 text-slate-500 max-w-xs truncate">{p.description || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-slate-800">{formatCurrency(p.price)}</td>
+                  <td className="px-4 py-3">
                     <ColourBadge colour={p.colour} />
                   </td>
-                  <td className={styles.dateCell}>{formatDate(p.createdAt)}</td>
+                  <td className="px-4 py-3 text-slate-500">{formatDate(p.createdAt)}</td>
                 </tr>
               ))}
         </tbody>

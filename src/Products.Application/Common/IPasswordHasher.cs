@@ -1,7 +1,9 @@
-namespace Products.Application.Common;
-
-public interface IPasswordHasher
+namespace Products.Application.Common
 {
-    string Hash(string password);
-    bool Verify(string password, string hash);
+
+    public interface IPasswordHasher
+    {
+        string Hash(string password);
+        bool Verify(string password, string hash);
+    }
 }

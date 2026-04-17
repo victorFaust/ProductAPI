@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getProducts } from '../api/productsApi';
 import type { ProductDto } from '../types';
 import ProductTable from '../components/ProductTable';
-import CreateProductForm from '../components/CreateProductForm';
-import styles from './ProductsPage.module.css';
+import ProductModal from '../components/ProductModal';
 
 export default function ProductsPage() {
   const { logout } = useAuth();
@@ -15,6 +14,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(false);
   const [colour, setColour] = useState('');
   const [debouncedColour, setDebouncedColour] = useState('');
+  const [showModal, setShowModal] = useState(false);
 
   // Debounce the colour filter input by 300ms
   useEffect(() => {
@@ -44,32 +44,43 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Products</h1>
-        <button className={styles.logoutBtn} onClick={handleLogout}>
+    <div className="min-h-screen bg-slate-100 flex flex-col">
+      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-900">Products</h1>
+        <button
+          className="text-sm text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+          onClick={handleLogout}
+        >
           Logout
         </button>
       </header>
 
-      <div className={styles.toolbar}>
+      <div className="px-6 py-4 flex items-center gap-3">
         <input
           type="text"
-          className={styles.filterInput}
+          className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-56"
           placeholder="Filter by colour…"
           value={colour}
           onChange={(e) => setColour(e.target.value)}
         />
+        <button
+          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer"
+          onClick={() => setShowModal(true)}
+        >
+          + Create Product
+        </button>
       </div>
 
-      <div className={styles.content}>
-        <div className={styles.tableSection}>
-          <ProductTable products={products} loading={loading} />
-        </div>
-        <aside className={styles.sidebar}>
-          <CreateProductForm onProductCreated={fetchProducts} />
-        </aside>
+      <div className="px-6 pb-8 flex-1">
+        <ProductTable products={products} loading={loading} />
       </div>
+
+      {showModal && (
+        <ProductModal
+          onClose={() => setShowModal(false)}
+          onProductCreated={fetchProducts}
+        />
+      )}
     </div>
   );
 }
